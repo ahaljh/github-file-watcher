@@ -1,0 +1,17 @@
+[project]
+name = "git-file-watcher"
+version = "0.1.0"
+description = "GitHub webhook을 받아 특정 브랜치의 의존성 파일 변경을 Slack으로 알리는 AWS Lambda"
+readme = "README.md"
+requires-python = ">=3.13"
+# 런타임 의존성 없음 (Python stdlib만 사용) — Lambda 패키징이 소스 zip만으로 끝난다.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

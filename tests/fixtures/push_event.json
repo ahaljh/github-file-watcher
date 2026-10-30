@@ -1,0 +1,41 @@
+{
+  "ref": "refs/heads/develop",
+  "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "after": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "compare": "https://github.com/acme/ai-agent/compare/aaaaaaaaaaaa...bbbbbbbbbbbb",
+  "repository": {
+    "full_name": "acme/ai-agent"
+  },
+  "pusher": {
+    "name": "hong-gildong"
+  },
+  "sender": {
+    "login": "hong-gildong"
+  },
+  "commits": [
+    {
+      "id": "1111111111111111111111111111111111111111",
+      "message": "chore: add new dependency httpx",
+      "url": "https://github.com/acme/ai-agent/commit/1111111111111111111111111111111111111111",
+      "added": [],
+      "modified": ["pyproject.toml", "src/agent/client.py"],
+      "removed": []
+    },
+    {
+      "id": "2222222222222222222222222222222222222222",
+      "message": "chore: lock deps",
+      "url": "https://github.com/acme/ai-agent/commit/2222222222222222222222222222222222222222",
+      "added": [],
+      "modified": ["uv.lock"],
+      "removed": []
+    }
+  ],
+  "head_commit": {
+    "id": "2222222222222222222222222222222222222222",
+    "message": "chore: lock deps",
+    "url": "https://github.com/acme/ai-agent/commit/2222222222222222222222222222222222222222",
+    "added": [],
+    "modified": ["uv.lock"],
+    "removed": []
+  }
+}
