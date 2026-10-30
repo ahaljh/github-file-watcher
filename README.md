@@ -1,15 +1,14 @@
 # github-file-watcher
 
-외부 GitHub의 특정 브랜치에 **의존성 파일이 변경**되면 Slack으로 알려주는 AWS Lambda.
+GitHub의 특정 브랜치에 **의존성 파일이 변경**되면 Slack으로 알려주는 AWS Lambda.
 
-외부망에서 개발하고 내부망(제한된 아웃바운드 + Nexus)으로 반영하는 구조에서,
-`pyproject.toml` / `uv.lock` 이 바뀌면 내부 Nexus에 새 패키지를 미리 반영해야 한다.
-이 서비스는 그 변경을 감지해 담당자에게 빠르게 알린다.
+`pyproject.toml` / `uv.lock` 같은 의존성 파일이 바뀌었을 때 후속 작업이 필요한 경우,
+이 서비스가 그 변경을 감지해 담당자에게 빠르게 알린다.
 
 ## 동작 방식
 
 ```
-외부 GitHub (push to develop)
+GitHub (push to develop)
         │  POST + X-Hub-Signature-256
         ▼
 Lambda Function URL  ──►  lambda_handler
