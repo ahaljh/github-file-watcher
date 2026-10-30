@@ -14,7 +14,7 @@
         ▼
 Lambda Function URL  ──►  lambda_handler
         │  1) HMAC-SHA256 서명 검증
-        │  2) event=push & ref=refs/heads/<WATCH_BRANCH> 필터
+        │  2) event=push & repo별 감시 대상(WATCH_TARGETS) 선택 + 브랜치 필터
         │  3) commits[].{added,modified,removed} 에서 감시 파일 매칭
         │  4) 매칭 시 Slack Incoming Webhook 으로 POST
         ▼
@@ -30,16 +30,34 @@ Slack 채널 알림
 |------|:---:|--------|------|
 | `GITHUB_WEBHOOK_SECRET` | ✅ | — | GitHub webhook secret. `X-Hub-Signature-256` 검증용 |
 | `SLACK_WEBHOOK_URL` | ✅ | — | Slack Incoming Webhook URL |
-| `WATCH_BRANCH` | | `develop` | 감시할 브랜치명 |
-| `WATCH_FILES` | | `pyproject.toml,uv.lock` | 감시 파일 패턴(콤마 구분, `fnmatch` glob 지원) |
-| `WATCH_REPO` | | (미검사) | `owner/repo`. 지정 시 payload repo와 일치할 때만 처리 |
+| `WATCH_TARGETS` | ✅ | — | 감시할 repo별 브랜치/파일 패턴 JSON (아래 참고) |
 | `LOG_LEVEL` | | `INFO` | 로깅 레벨 |
 
-`WATCH_FILES` 는 **레포 루트 기준 전체 경로**를 `fnmatch` glob으로 비교한다(파일 이름만 비교하는 게 아니다).
+### 감시 대상 (`WATCH_TARGETS`)
+
+Lambda 하나로 여러 repo를 감시한다. `WATCH_TARGETS` 에 repo별 규칙을 JSON 객체로 넣는다.
+알림은 모두 같은 `SLACK_WEBHOOK_URL` 채널로 가며, 메시지 헤더에 `[owner/repo]` 가 표시돼 구분된다.
+
+```json
+{
+  "acme/backend":  {"branch": "develop", "files": ["pyproject.toml", "uv.lock"]},
+  "acme/frontend": {"files": ["package.json", "package-lock.json"]}
+}
+```
+
+- 키: `owner/repo` (대소문자 무시)
+- `files` (필수): 파일 패턴 리스트 또는 콤마 구분 문자열.
+- `branch` (선택): 생략하면 `develop`
+- 목록에 없는 repo에서 온 push는 `ignored (repo mismatch)` 로 무시한다.
+- AWS 콘솔 환경변수 값에는 위 JSON을 **한 줄로** 붙여 넣으면 된다.
+
+### 파일 패턴 규칙
+
+`files` 패턴은 **레포 루트 기준 전체 경로**를 `fnmatch` glob으로 비교한다(파일 이름만 비교하는 게 아니다).
 GitHub이 주는 변경 파일 경로가 `pyproject.toml`, `services/api/pyproject.toml` 처럼 레포-상대 경로이기 때문이다.
 
-- 기본값 `pyproject.toml,uv.lock` 은 **루트에 있는 파일만** 매칭한다. (uv 단일 레포의 일반적 위치)
-- `fnmatch` 의 `*` 는 일반 glob과 달리 `/` 도 건너뛴다. 위치와 무관하게 이름으로 잡으려면 `*pyproject.toml,*uv.lock` 처럼 쓴다.
+- `pyproject.toml` 처럼 이름만 쓰면 **루트에 있는 파일만** 매칭한다.
+- `fnmatch` 의 `*` 는 일반 glob과 달리 `/` 도 건너뛴다. 위치와 무관하게 이름으로 잡으려면 `*pyproject.toml` 처럼 쓴다.
 - 특정 하위 경로만 보려면 `services/api/pyproject.toml` 처럼 경로 전체를 지정한다.
 
 | 패턴 | 매칭되는 경로 |
@@ -105,11 +123,9 @@ function.zip
 |-----|------|
 | `GITHUB_WEBHOOK_SECRET` | `<github webhook secret>` |
 | `SLACK_WEBHOOK_URL` | `https://hooks.slack.com/services/XXX/YYY/ZZZ` |
-| `WATCH_BRANCH` | `develop` |
-| `WATCH_FILES` | `pyproject.toml,uv.lock` |
-| `WATCH_REPO` | `acme/ai-agent` (선택) |
+| `WATCH_TARGETS` | `{"acme/backend": {"files": ["pyproject.toml", "uv.lock"]}, "acme/frontend": {"files": ["package.json", "package-lock.json"]}}` |
 
-> 필수: `GITHUB_WEBHOOK_SECRET`, `SLACK_WEBHOOK_URL`. 나머지는 생략 시 기본값 사용.
+> 필수: `GITHUB_WEBHOOK_SECRET`, `SLACK_WEBHOOK_URL`, `WATCH_TARGETS`.
 
 ### 6) 타임아웃 조정 (권장)
 
@@ -131,11 +147,11 @@ function.zip
 
 ### 9) GitHub Webhook 등록
 
-대상 repo → **Settings → Webhooks → Add webhook**
+감시할 **각 repo마다** → **Settings → Webhooks → Add webhook** (여러 repo면 repo마다 반복)
 
 - **Payload URL**: 7)에서 복사한 Function URL
 - **Content type**: `application/json`
-- **Secret**: `GITHUB_WEBHOOK_SECRET` 과 **동일한 값**
+- **Secret**: `GITHUB_WEBHOOK_SECRET` 과 **동일한 값** (여러 repo 모두 같은 시크릿 사용)
 - **Which events**: *Just the push event*
 
 ## 검증

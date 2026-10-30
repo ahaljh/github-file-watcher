@@ -84,29 +84,29 @@ def lambda_handler(event: dict, context: object = None) -> dict:
         logger.warning("payload JSON 파싱 실패")
         return _response(400, {"status": "invalid payload"})
 
-    # 2) 감시 대상 repo 검사 (WATCH_REPO 설정 시).
-    if cfg.watch_repo:
-        repo = github.repo_full_name(payload)
-        if repo != cfg.watch_repo:
-            logger.info("대상 repo 아님: %s", repo)
-            return _response(200, {"status": "ignored", "reason": "repo mismatch"})
+    # 2) repo에 해당하는 감시 대상 선택.
+    repo = github.repo_full_name(payload)
+    target = cfg.find_target(repo)
+    if target is None:
+        logger.info("대상 repo 아님: %s", repo)
+        return _response(200, {"status": "ignored", "reason": "repo mismatch"})
 
     # 3) 브랜치 필터.
     branch = github.branch_name(payload)
-    if branch != cfg.watch_branch:
-        logger.info("대상 브랜치 아님: %s", branch)
+    if branch != target.branch:
+        logger.info("대상 브랜치 아님: %s (repo=%s)", branch, repo)
         return _response(200, {"status": "ignored", "reason": "branch mismatch"})
 
     # 4) 변경 파일 매칭.
     changed = github.extract_changed_files(payload)
-    matched = github.match_watched(changed, cfg.watch_files)
+    matched = github.match_watched(changed, target.files)
     if not matched:
-        logger.info("감시 파일 변경 없음 (변경 %d개)", len(changed))
+        logger.info("감시 파일 변경 없음 (repo=%s, 변경 %d개)", repo, len(changed))
         return _response(200, {"status": "ignored", "reason": "no watched files changed"})
 
     # 5) Slack 알림.
     info = github.summarize(payload)
-    message = slack.build_message(info, matched, cfg.watch_branch)
+    message = slack.build_message(info, matched, target.branch)
     try:
         slack.send(cfg.slack_webhook_url, message)
     except OSError:

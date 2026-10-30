@@ -1,17 +1,30 @@
 """환경변수 기반 설정 로드.
 
 Lambda 환경변수로 동작을 제어한다. 시크릿/URL 같은 민감 정보는 코드에 두지 않고
-모두 환경변수로 주입한다.
+모두 환경변수로 주입한다. 감시 대상은 ``WATCH_TARGETS`` 에 repo별 브랜치/파일 패턴을
+JSON으로 지정한다.
 """
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
+
+_DEFAULT_BRANCH = "develop"
 
 
 class ConfigError(RuntimeError):
     """필수 환경변수가 없거나 잘못된 경우 발생."""
+
+
+@dataclass(frozen=True)
+class WatchTarget:
+    """감시 대상 하나(repo + 브랜치 + 파일 패턴)."""
+
+    repo: str
+    branch: str
+    files: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -20,15 +33,71 @@ class Config:
 
     github_webhook_secret: str
     slack_webhook_url: str
-    watch_branch: str
-    watch_files: tuple[str, ...]
-    watch_repo: str | None
+    targets: tuple[WatchTarget, ...]
     log_level: str
 
+    def find_target(self, repo: str | None) -> WatchTarget | None:
+        """payload의 repo(``owner/repo``)에 해당하는 감시 대상을 찾는다.
 
-def _split_files(raw: str) -> tuple[str, ...]:
-    """콤마로 구분된 파일 패턴 문자열을 정규화된 튜플로 변환."""
-    return tuple(item.strip() for item in raw.split(",") if item.strip())
+        GitHub repo 이름은 대소문자를 구분하지 않으므로 대소문자 무시로 비교한다.
+        """
+        if not repo:
+            return None
+        key = repo.casefold()
+        return next((t for t in self.targets if t.repo.casefold() == key), None)
+
+
+def _parse_files(raw: object) -> tuple[str, ...]:
+    """파일 패턴(리스트 또는 콤마 구분 문자열)을 정규화된 튜플로 변환."""
+    if isinstance(raw, str):
+        items = raw.split(",")
+    elif isinstance(raw, list) and all(isinstance(item, str) for item in raw):
+        items = raw
+    else:
+        return ()
+    return tuple(item.strip() for item in items if item.strip())
+
+
+def _parse_targets(raw: str) -> tuple[WatchTarget, ...]:
+    """``WATCH_TARGETS`` JSON을 파싱한다.
+
+    형식::
+
+        {
+          "acme/backend":  {"branch": "develop", "files": ["pyproject.toml", "uv.lock"]},
+          "acme/frontend": {"files": ["package.json", "package-lock.json"]}
+        }
+
+    ``branch`` 를 생략하면 develop 을 쓴다.
+    ``files`` 는 리스트 또는 콤마 구분 문자열 모두 허용한다.
+    """
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        raise ConfigError(f"WATCH_TARGETS JSON 파싱 실패: {exc}") from exc
+
+    if not isinstance(data, dict) or not data:
+        raise ConfigError("WATCH_TARGETS 는 비어 있지 않은 JSON 객체여야 합니다.")
+
+    targets: list[WatchTarget] = []
+    for repo, spec in data.items():
+        repo = repo.strip()
+        if not repo:
+            raise ConfigError("WATCH_TARGETS 의 repo 이름이 비어 있습니다.")
+        if not isinstance(spec, dict):
+            raise ConfigError(f"WATCH_TARGETS[{repo}] 는 JSON 객체여야 합니다.")
+
+        branch = spec.get("branch", _DEFAULT_BRANCH)
+        if not isinstance(branch, str) or not branch.strip():
+            raise ConfigError(f"WATCH_TARGETS[{repo}].branch 가 올바르지 않습니다.")
+
+        files = _parse_files(spec.get("files"))
+        if not files:
+            raise ConfigError(f"WATCH_TARGETS[{repo}].files 에 최소 하나의 파일 패턴이 필요합니다.")
+
+        targets.append(WatchTarget(repo=repo, branch=branch.strip(), files=files))
+
+    return tuple(targets)
 
 
 def load(env: dict[str, str] | None = None) -> Config:
@@ -38,7 +107,7 @@ def load(env: dict[str, str] | None = None) -> Config:
         env: 테스트용으로 주입할 환경 매핑. 기본값은 ``os.environ``.
 
     Raises:
-        ConfigError: 필수 값이 없거나 감시 파일 목록이 비어 있을 때.
+        ConfigError: 필수 값이 없거나 감시 대상 설정이 잘못됐을 때.
     """
     env = os.environ if env is None else env
 
@@ -50,20 +119,15 @@ def load(env: dict[str, str] | None = None) -> Config:
     if not slack_url:
         raise ConfigError("SLACK_WEBHOOK_URL 환경변수가 필요합니다.")
 
-    watch_branch = env.get("WATCH_BRANCH", "develop").strip() or "develop"
+    raw_targets = env.get("WATCH_TARGETS", "").strip()
+    if not raw_targets:
+        raise ConfigError("WATCH_TARGETS 환경변수가 필요합니다.")
 
-    watch_files = _split_files(env.get("WATCH_FILES", "pyproject.toml,uv.lock"))
-    if not watch_files:
-        raise ConfigError("WATCH_FILES 에 최소 하나의 파일 패턴이 필요합니다.")
-
-    watch_repo = env.get("WATCH_REPO", "").strip() or None
     log_level = env.get("LOG_LEVEL", "INFO").strip().upper() or "INFO"
 
     return Config(
         github_webhook_secret=secret,
         slack_webhook_url=slack_url,
-        watch_branch=watch_branch,
-        watch_files=watch_files,
-        watch_repo=watch_repo,
+        targets=_parse_targets(raw_targets),
         log_level=log_level,
     )
