@@ -174,3 +174,12 @@ def test_multi_repo_ignored(
     resp = handler.lambda_handler(_event(body))
     assert json.loads(resp["body"]) == {"status": "ignored", "reason": reason}
     assert sent == []
+
+
+def test_sender_fields_passed_to_slack(monkeypatch: pytest.MonkeyPatch, sent: list[dict]) -> None:
+    monkeypatch.setenv("SLACK_USERNAME", "deps-bot")
+    resp = handler.lambda_handler(_event(FIXTURE.read_bytes()))
+    assert resp["statusCode"] == 200
+    assert sent[0]["username"] == "deps-bot"
+    assert sent[0]["icon_emoji"] == ":owl:"
+    assert "icon_url" not in sent[0]

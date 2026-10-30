@@ -26,8 +26,15 @@ def build_message(
     info: PushInfo,
     matched_files: list[str],
     watch_branch: str,
+    username: str | None = None,
+    icon_emoji: str | None = None,
+    icon_url: str | None = None,
 ) -> dict:
-    """Slack Incoming Webhook용 메시지 payload(Block Kit)를 만든다."""
+    """Slack Incoming Webhook용 메시지 payload(Block Kit)를 만든다.
+
+    ``username`` / ``icon_emoji`` / ``icon_url`` 은 값이 있을 때만 payload에 넣는다.
+    (레거시 webhook에서만 적용되고, Slack App webhook에서는 무시된다.)
+    """
     repo = _escape(info.repo or "(unknown repo)")
     branch = _escape(info.branch or watch_branch)
     files_text = "\n".join(f"• `{_escape(path)}`" for path in matched_files)
@@ -53,7 +60,8 @@ def build_message(
             }
         )
 
-    link = info.head_commit_url or info.compare_url
+    # push에 포함된 모든 커밋의 변경을 한 화면에서 볼 수 있도록 compare URL 우선.
+    link = info.compare_url or info.head_commit_url
     if link:
         blocks.append(
             {
@@ -64,7 +72,14 @@ def build_message(
 
     # Block Kit 미지원 클라이언트를 위한 fallback 텍스트.
     fallback = f"{header}\n{files_text}"
-    return {"text": fallback, "blocks": blocks}
+    message: dict = {"text": fallback, "blocks": blocks}
+    if username:
+        message["username"] = username
+    if icon_emoji:
+        message["icon_emoji"] = icon_emoji
+    if icon_url:
+        message["icon_url"] = icon_url
+    return message
 
 
 def send(webhook_url: str, message: dict) -> None:

@@ -12,6 +12,8 @@ import os
 from dataclasses import dataclass
 
 _DEFAULT_BRANCH = "develop"
+_DEFAULT_SLACK_USERNAME = "github-file-watcher"
+_DEFAULT_SLACK_ICON_EMOJI = ":owl:"
 
 
 class ConfigError(RuntimeError):
@@ -35,6 +37,11 @@ class Config:
     slack_webhook_url: str
     targets: tuple[WatchTarget, ...]
     log_level: str
+    # Slack 발신자 표시. 레거시 "Incoming WebHooks" 통합에서만 적용되고,
+    # Slack App에서 발급한 webhook이면 Slack이 무시하고 App 설정을 따른다.
+    slack_username: str | None = None
+    slack_icon_emoji: str | None = None
+    slack_icon_url: str | None = None
 
     def find_target(self, repo: str | None) -> WatchTarget | None:
         """payload의 repo(``owner/repo``)에 해당하는 감시 대상을 찾는다.
@@ -125,9 +132,18 @@ def load(env: dict[str, str] | None = None) -> Config:
 
     log_level = env.get("LOG_LEVEL", "INFO").strip().upper() or "INFO"
 
+    slack_icon_url = env.get("SLACK_ICON_URL", "").strip() or None
+    slack_icon_emoji = env.get("SLACK_ICON_EMOJI", "").strip() or None
+    if slack_icon_emoji is None and slack_icon_url is None:
+        # icon_url만 설정한 경우엔 이모지가 우선 적용돼 URL이 묻히므로 기본 이모지를 넣지 않는다.
+        slack_icon_emoji = _DEFAULT_SLACK_ICON_EMOJI
+
     return Config(
         github_webhook_secret=secret,
         slack_webhook_url=slack_url,
         targets=_parse_targets(raw_targets),
         log_level=log_level,
+        slack_username=env.get("SLACK_USERNAME", "").strip() or _DEFAULT_SLACK_USERNAME,
+        slack_icon_emoji=slack_icon_emoji,
+        slack_icon_url=slack_icon_url,
     )

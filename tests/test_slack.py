@@ -43,3 +43,58 @@ def test_build_message_escapes_mrkdwn() -> None:
     dumped = str(message["blocks"])
     assert "<!channel>" not in dumped
     assert "&lt;!channel&gt; a &amp; b &gt; c" in dumped
+
+
+def _link_text(message: dict) -> str:
+    """'변경 내용 보기' 링크가 담긴 context 블록의 텍스트를 반환한다."""
+    texts = [
+        el["text"]
+        for block in message["blocks"]
+        if block["type"] == "context"
+        for el in block["elements"]
+        if "변경 내용 보기" in el["text"]
+    ]
+    assert len(texts) == 1
+    return texts[0]
+
+
+def test_build_message_links_compare_url() -> None:
+    info = PushInfo(
+        repo="acme/ai-agent",
+        branch="develop",
+        pusher=None,
+        compare_url="https://github.com/acme/ai-agent/compare/a...b",
+        head_commit_url="https://github.com/acme/ai-agent/commit/b",
+        head_commit_message=None,
+    )
+    message = slack.build_message(info, ["uv.lock"], "develop")
+    assert _link_text(message) == "<https://github.com/acme/ai-agent/compare/a...b|변경 내용 보기>"
+
+
+def test_build_message_falls_back_to_head_commit_url() -> None:
+    info = PushInfo(
+        repo="acme/ai-agent",
+        branch="develop",
+        pusher=None,
+        compare_url=None,
+        head_commit_url="https://github.com/acme/ai-agent/commit/b",
+        head_commit_message=None,
+    )
+    message = slack.build_message(info, ["uv.lock"], "develop")
+    assert _link_text(message) == "<https://github.com/acme/ai-agent/commit/b|변경 내용 보기>"
+
+
+def test_build_message_sender_fields() -> None:
+    info = PushInfo("acme/ai-agent", "develop", None, None, None, None)
+
+    # 미설정 시 payload에 키 자체가 없어야 한다.
+    plain = slack.build_message(info, ["uv.lock"], "develop")
+    assert set(plain) == {"text", "blocks"}
+
+    custom = slack.build_message(
+        info, ["uv.lock"], "develop",
+        username="github-file-watcher", icon_emoji=":owl:", icon_url="https://x/i.png",
+    )
+    assert custom["username"] == "github-file-watcher"
+    assert custom["icon_emoji"] == ":owl:"
+    assert custom["icon_url"] == "https://x/i.png"

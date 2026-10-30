@@ -61,3 +61,22 @@ def test_missing_required(missing: str) -> None:
     del env[missing]
     with pytest.raises(config.ConfigError):
         config.load(env)
+
+
+TARGETS = {"WATCH_TARGETS": '{"acme/backend": {"files": ["uv.lock"]}}'}
+
+
+@pytest.mark.parametrize(
+    ("extra", "expected"),
+    [
+        # 아무것도 설정하지 않으면 기본 이름/이모지.
+        ({}, ("github-file-watcher", ":owl:", None)),
+        ({"SLACK_USERNAME": "bot", "SLACK_ICON_EMOJI": ":rocket:"}, ("bot", ":rocket:", None)),
+        # icon_url만 설정하면 기본 이모지를 넣지 않는다 (이모지가 URL보다 우선 적용되므로).
+        ({"SLACK_ICON_URL": "https://x/i.png"}, ("github-file-watcher", None, "https://x/i.png")),
+        ({"SLACK_USERNAME": " ", "SLACK_ICON_EMOJI": ""}, ("github-file-watcher", ":owl:", None)),
+    ],
+)
+def test_slack_sender(extra: dict[str, str], expected: tuple[str, str | None, str | None]) -> None:
+    cfg = config.load({**BASE, **TARGETS, **extra})
+    assert (cfg.slack_username, cfg.slack_icon_emoji, cfg.slack_icon_url) == expected

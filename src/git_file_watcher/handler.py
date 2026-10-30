@@ -106,7 +106,14 @@ def lambda_handler(event: dict, context: object = None) -> dict:
 
     # 5) Slack 알림.
     info = github.summarize(payload)
-    message = slack.build_message(info, matched, target.branch)
+    message = slack.build_message(
+        info,
+        matched,
+        target.branch,
+        username=cfg.slack_username,
+        icon_emoji=cfg.slack_icon_emoji,
+        icon_url=cfg.slack_icon_url,
+    )
     try:
         slack.send(cfg.slack_webhook_url, message)
     except OSError:

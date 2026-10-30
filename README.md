@@ -31,7 +31,23 @@ Slack 채널 알림
 | `GITHUB_WEBHOOK_SECRET` | ✅ | — | GitHub webhook secret. `X-Hub-Signature-256` 검증용 |
 | `SLACK_WEBHOOK_URL` | ✅ | — | Slack Incoming Webhook URL |
 | `WATCH_TARGETS` | ✅ | — | 감시할 repo별 브랜치/파일 패턴 JSON (아래 참고) |
+| `SLACK_USERNAME` | | `github-file-watcher` | Slack 발신자 이름 (레거시 webhook에서만 적용) |
+| `SLACK_ICON_EMOJI` | | `:owl:` | Slack 발신자 아이콘 이모지 (레거시 webhook에서만 적용) |
+| `SLACK_ICON_URL` | | — | Slack 발신자 아이콘 이미지 URL (레거시 webhook에서만 적용) |
 | `LOG_LEVEL` | | `INFO` | 로깅 레벨 |
+
+### Slack 발신자 이름/아이콘 (`SLACK_USERNAME` / `SLACK_ICON_EMOJI` / `SLACK_ICON_URL`)
+
+메시지 payload에 `username` / `icon_emoji` / `icon_url` 을 넣어 보낸다. 다만 **적용 여부는 webhook 종류에 달려 있다.**
+
+| webhook 종류 | 적용 여부 |
+|------|------|
+| 레거시 **"Incoming WebHooks"** 커스텀 통합 | ✅ 적용된다 |
+| **Slack App** 에서 발급한 webhook (현재 표준) | ❌ 무시된다. App 설정(Basic Information → Display Information)의 이름/아이콘이 표시된다 |
+
+- 아무것도 설정하지 않으면 `github-file-watcher` / `:owl:` 로 보낸다.
+- `SLACK_ICON_URL` 만 설정하면 기본 이모지를 넣지 않는다. 이모지가 URL보다 우선 적용돼 이미지가 가려지기 때문이다.
+- 이모지 이름은 Slack 이모지 선택 창에서 마우스를 올리면 나오는 `:name:` 을 그대로 쓴다.
 
 ### 감시 대상 (`WATCH_TARGETS`)
 
