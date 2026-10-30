@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from git_file_watcher import github
+from github_file_watcher import github
 
 FIXTURE = Path(__file__).parent / "fixtures" / "push_event.json"
 

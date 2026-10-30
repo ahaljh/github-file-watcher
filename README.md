@@ -1,4 +1,4 @@
-# git-file-watcher
+# github-file-watcher
 
 외부 GitHub의 특정 브랜치에 **의존성 파일이 변경**되면 Slack으로 알려주는 AWS Lambda.
 
@@ -103,7 +103,7 @@ zip 내부 구조는 아래와 같아야 하며(핸들러 경로와 일치), `bu
 
 ```
 function.zip
-└── git_file_watcher/
+└── github_file_watcher/
     ├── __init__.py
     ├── handler.py
     ├── config.py
@@ -116,7 +116,7 @@ function.zip
 **Lambda 콘솔 → Create function**
 
 - **Author from scratch** 선택
-- **Function name**: `git-file-watcher` (원하는 이름)
+- **Function name**: `github-file-watcher` (원하는 이름)
 - **Runtime**: `Python 3.13`
 - **Architecture**: 기본값(`x86_64`) — 순수 파이썬이라 아키텍처 무관
 - 실행 역할: 기본 옵션(*Create a new role with basic Lambda permissions*)이면 충분
@@ -129,7 +129,7 @@ function.zip
 ### 4) 핸들러 지정
 
 **Code** 탭 아래 **Runtime settings → Edit** →
-**Handler** 를 `git_file_watcher.handler.lambda_handler` 로 설정 → **Save**
+**Handler** 를 `github_file_watcher.handler.lambda_handler` 로 설정 → **Save**
 
 ### 5) 환경변수 설정
 

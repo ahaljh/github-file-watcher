@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from git_file_watcher import config
-from git_file_watcher.config import WatchTarget
+from github_file_watcher import config
+from github_file_watcher.config import WatchTarget
 
 BASE = {"GITHUB_WEBHOOK_SECRET": "s", "SLACK_WEBHOOK_URL": "https://hooks.slack.test/x"}
 

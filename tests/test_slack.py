@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from git_file_watcher import slack
-from git_file_watcher.github import PushInfo
+from github_file_watcher import slack
+from github_file_watcher.github import PushInfo
 
 
 def test_build_message_contains_files_and_repo() -> None:

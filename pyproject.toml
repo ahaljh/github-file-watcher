@@ -1,5 +1,5 @@
 [project]
-name = "git-file-watcher"
+name = "github-file-watcher"
 version = "0.1.0"
 description = "GitHub webhook을 받아 특정 브랜치의 의존성 파일 변경을 Slack으로 알리는 AWS Lambda"
 readme = "README.md"

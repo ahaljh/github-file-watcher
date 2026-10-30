@@ -12,7 +12,7 @@ wheels = [
 ]
 
 [[package]]
-name = "git-file-watcher"
+name = "github-file-watcher"
 version = "0.1.0"
 source = { virtual = "." }
 

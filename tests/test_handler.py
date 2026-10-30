@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from git_file_watcher import handler, slack
+from github_file_watcher import handler, slack
 
 FIXTURE = Path(__file__).parent / "fixtures" / "push_event.json"
 SECRET = "s3cr3t"

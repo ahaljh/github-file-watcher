@@ -15,7 +15,7 @@ import logging
 
 from . import config, github, slack
 
-logger = logging.getLogger("git_file_watcher")
+logger = logging.getLogger("github_file_watcher")
 
 
 def _setup_logging(level: str) -> None:
